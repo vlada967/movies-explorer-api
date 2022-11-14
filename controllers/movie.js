@@ -1,17 +1,29 @@
 const Movie = require('../models/movie');
 const NotFoundError = require('../errors/NotFoundError');
 const BadRequestError = require('../errors/BadRequestError');
-const ForbiddenError = require('../errors/ForbiddenError');
-const { regexForUrl } = require('../utils/constants');
 
 const getMovies = (req, res, next) => Movie.find({})
   .then((movies) => res.send({ data: movies }))
   .catch((err) => { next(err); });
 
 const createMovie = (req, res, next) => {
-  console.log(req.body)
-  const { country, director, duration, year, description, image, trailerLink, thumbnail, nameRU, nameEN, movieId } = req.body;
-  return Movie.create({ country, director, duration, year, description, image, trailerLink, thumbnail, nameRU, nameEN, movieId })
+  const {
+    country, director, duration, year, description,
+    image, trailerLink, thumbnail, nameRU, nameEN, movieId,
+  } = req.body;
+  return Movie.create({
+    country,
+    director,
+    duration,
+    year,
+    description,
+    image,
+    trailerLink,
+    thumbnail,
+    nameRU,
+    nameEN,
+    movieId,
+  })
     .then((movie) => res.send({ data: movie }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
@@ -35,15 +47,14 @@ const deleteMovie = (req, res, next) => {
       }
     })
     .catch((err) => {
-      console.log(err)
       if (err.name === 'CastError') {
         next(new BadRequestError(`${req.params.movieId} не является корректным id`));
       } else {
         next(err);
       }
     });
-}
+};
 
 module.exports = {
-  getMovies, createMovie, deleteMovie
+  getMovies, createMovie, deleteMovie,
 };
