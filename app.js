@@ -3,11 +3,9 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
-const { celebrate, Joi } = require('celebrate');
 const { errors } = require('celebrate');
 const auth = require('./middlewares/auth');
 const errorHandler = require('./middlewares/errorHandler');
-const { login, createUser } = require('./controllers/user');
 const NotFoundError = require('./errors/NotFoundError');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
 const cors = require('./middlewares/cors');
@@ -34,24 +32,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(requestLogger);
 
-app.post('/signup', celebrate({
-  body: Joi.object().keys({
-    email: Joi.string().required().email(),
-    password: Joi.string().required(),
-    name: Joi.string().min(2).max(30),
-  }),
-}), createUser);
-app.post('/signin', celebrate({
-  body: Joi.object().keys({
-    email: Joi.string().required().email(),
-    password: Joi.string().required(),
-  }),
-}), login);
+app.use(require('./routes/signup'));
+app.use(require('./routes/signin'));
 
 app.use(auth);
 
-app.use('/users', require('./routes/user'));
-app.use('/movies', require('./routes/movie'));
+app.use(require('./routes/user'));
+app.use(require('./routes/movie'));
 
 app.use('/', () => {
   throw new NotFoundError('Неправильный адрес запроса');

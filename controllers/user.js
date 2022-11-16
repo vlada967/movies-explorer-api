@@ -3,13 +3,19 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const BadRequestError = require('../errors/BadRequestError');
 const AuthorizedError = require('../errors/AuthorizedError');
+const NotFoundError = require('../errors/NotFoundError');
 const ConflictError = require('../errors/ConflictError');
 require('dotenv').config();
 
 const { NODE_ENV, JWT_SECRET_KEY } = process.env;
 
-const getUser = (req, res, next) => User.find({})
-  .then((user) => res.send({ data: user }))
+const getUser = (req, res, next) => User.findById(req.user._id)
+  .then((user) => {
+    if (!user) {
+      throw new NotFoundError('Пользователь не найден');
+    }
+    res.send({ data: user });
+  })
   .catch((err) => { next(err); });
 
 const updateUser = (req, res, next) => {
@@ -22,7 +28,9 @@ const updateUser = (req, res, next) => {
       res.send({ data: user });
     })
     .catch((err) => {
-      if (err.name === 'ValidationError') {
+      if (err.code === 11000) {
+        next(new ConflictError('Пользователь с таким email уже существует'));
+      } else if (err.name === 'ValidationError') {
         next(new BadRequestError('Некорректные данные'));
       } else {
         next(err);
@@ -48,8 +56,7 @@ const createUser = (req, res, next) => {
         }).catch((err) => {
           if (err.code === 11000) {
             next(new ConflictError('Пользователь с таким email уже существует'));
-          }
-          if (err.name === 'ValidationError') {
+          } else if (err.name === 'ValidationError') {
             next(new BadRequestError('Некорректные данные'));
           } else {
             next(err);
@@ -66,8 +73,12 @@ const login = (req, res, next) => {
       const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_SECRET_KEY : 'dev-secret', { expiresIn: '7d' });
       res.send({ token });
     })
-    .catch(() => {
-      next(new AuthorizedError('Необходима авторизация'));
+    .catch((err) => {
+      if (err.name === 'TypeError') {
+        next(new AuthorizedError('Неправильная почта или пароль'));
+      } else {
+        next(new AuthorizedError('Необходима авторизация'));
+      }
     });
 };
 
